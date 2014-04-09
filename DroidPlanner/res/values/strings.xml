@@ -26,7 +26,9 @@
     <string name="pref_connection_type_summary">Which link to use to connect to the drone</string>
     <string name="pref_mavlink">MAVLink</string>
     <string name="pref_mavlink_log">Enable Logging</string>
+    <string name="pref_live_upload">Enable live upload</string>
     <string name="pref_mavlink_log_summary">Logs the MAVLink communication to a *.tlog file, may degrade performance</string>
+    <string name="pref_live_upload_summary">Live vehicle monitoring on Droneshare</string>
     <string name="pref_mavlink_rates">Stream Rates</string>
     <string name="pref_mavlink_rates_summary">Rate in which flight data should be received from the drone (in Hz)</string>
     <string name="pref_mavlink_stream_rate_ext_stat">Waypoints, GPS raw, fence data, current waypoint, etc</string>

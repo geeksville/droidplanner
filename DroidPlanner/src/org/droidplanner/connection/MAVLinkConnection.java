@@ -16,6 +16,7 @@ import android.preference.PreferenceManager;
 import com.MAVLink.Parser;
 import com.MAVLink.Messages.MAVLinkMessage;
 import com.MAVLink.Messages.MAVLinkPacket;
+import com.geeksville.apiproxy.TestClient;
 
 public abstract class MAVLinkConnection extends Thread {
 
@@ -42,7 +43,9 @@ public abstract class MAVLinkConnection extends Thread {
 	protected Context parentContext;
 	private MavLinkConnectionListener listener;
 	private boolean logEnabled;
+	private boolean liveUploadEnabled;
 	private BufferedOutputStream logWriter;
+	private TestClient uploader;
 
 	protected MAVLinkPacket receivedPacket;
 	protected Parser parser = new Parser();
@@ -59,6 +62,7 @@ public abstract class MAVLinkConnection extends Thread {
 		SharedPreferences prefs = PreferenceManager
 				.getDefaultSharedPreferences(parentContext);
 		logEnabled = prefs.getBoolean("pref_mavlink_log_enabled", false);
+		liveUploadEnabled = prefs.getBoolean("pref_live_upload_enabled", false);
 		getPreferences(prefs);
 	}
 
@@ -73,11 +77,19 @@ public abstract class MAVLinkConnection extends Thread {
 				logBuffer = ByteBuffer.allocate(Long.SIZE / Byte.SIZE);
 				logBuffer.order(ByteOrder.BIG_ENDIAN);
 			}
-
+			if (liveUploadEnabled) {
+				// FIXME - need to auto reconnect as needed like in the
+				// posixpilot version
+				uploader = new TestClient();
+				uploader.connect();
+			}
 			while (connected) {
 				readDataBlock();
 				handleData();
 			}
+			if (uploader != null)
+				uploader.close();
+
 			closeConnection();
 
 		} catch (FileNotFoundException e) {
@@ -106,23 +118,28 @@ public abstract class MAVLinkConnection extends Thread {
 	}
 
 	private void saveToLog(MAVLinkPacket receivedPacket) throws IOException {
-		if (logEnabled) {
-			try {
+
+		try {
+			byte[] bytes = receivedPacket.encodePacket();
+			if (logEnabled) {
 				logBuffer.clear();
 				long time = System.currentTimeMillis() * 1000;
 				logBuffer.putLong(time);
 				logWriter.write(logBuffer.array());
-				logWriter.write(receivedPacket.encodePacket());
-			} catch (Exception e) {
-				// There was a null pointer error for some users on
-				// logBuffer.clear();
+				logWriter.write(bytes);
 			}
+
+			if (uploader != null)
+				uploader.filterMavlink(uploader.interfaceNum, bytes);
+		} catch (Exception e) {
+			// There was a null pointer error for some users on
+			// logBuffer.clear();
 		}
 	}
 
 	/**
 	 * Format and send a Mavlink packet via the MAVlink stream
-	 *
+	 * 
 	 * @param packet
 	 *            MavLink packet to be transmitted
 	 */
